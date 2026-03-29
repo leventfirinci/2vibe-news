@@ -3,12 +3,14 @@
 import { Article } from "@/lib/types";
 import { CATEGORIES } from "@/data/sources";
 import ReliabilityBadge from "./ReliabilityBadge";
+import { Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 
 interface CompactCardProps {
   article: Article;
   onSelect: (article: Article) => void;
+  sourceCount?: number;
 }
 
 function timeAgo(dateStr: string): string {
@@ -16,7 +18,7 @@ function timeAgo(dateStr: string): string {
   catch { return ""; }
 }
 
-export default function CompactCard({ article, onSelect }: CompactCardProps) {
+export default function CompactCard({ article, onSelect, sourceCount }: CompactCardProps) {
   const category = CATEGORIES.find((c) => c.id === article.category);
 
   return (
@@ -26,7 +28,7 @@ export default function CompactCard({ article, onSelect }: CompactCardProps) {
     >
       {/* Category dot */}
       <span
-        className="w-1.5 h-1.5 rounded-full shrink-0 opacity-60"
+        className="w-1.5 h-1.5 rounded-full shrink-0 opacity-50"
         style={{ backgroundColor: category?.color || "var(--color-text-muted)" }}
       />
 
@@ -37,13 +39,19 @@ export default function CompactCard({ article, onSelect }: CompactCardProps) {
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className="text-[10px] text-[var(--color-text-muted)]">{article.sourceName}</span>
-          <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">|</span>
+          <span className="text-[10px] text-[var(--color-text-muted)] opacity-30">|</span>
           <span className="text-[10px] text-[var(--color-text-muted)]">{category?.labelTr}</span>
         </div>
       </div>
 
       {/* Right */}
       <div className="flex items-center gap-2 shrink-0">
+        {sourceCount && sourceCount > 1 && (
+          <span className="flex items-center gap-0.5 text-[10px] text-[var(--color-accent)] font-semibold">
+            <Users className="w-2.5 h-2.5" />
+            {sourceCount}
+          </span>
+        )}
         <ReliabilityBadge score={article.sourceReliability} size="sm" />
         <span className="text-[10px] text-[var(--color-text-muted)] whitespace-nowrap">
           {timeAgo(article.publishedAt)}

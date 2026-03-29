@@ -3,14 +3,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Header from "@/components/Header";
 import CategoryBar from "@/components/CategoryBar";
-import HeroSection from "@/components/HeroSection";
-import TrendingBar from "@/components/TrendingBar";
-import MediumCard from "@/components/MediumCard";
+import LiveHero from "@/components/LiveHero";
+import TrendingEvents from "@/components/TrendingEvents";
+import EventCard from "@/components/EventCard";
 import CompactCard from "@/components/CompactCard";
 import SectionLabel from "@/components/SectionLabel";
 import ArticleDetail from "@/components/ArticleDetail";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { Article, Category } from "@/lib/types";
+import { clusterArticlesIntoEvents, NewsEvent } from "@/lib/event-cluster";
 import { Newspaper, RefreshCw, Zap, List } from "lucide-react";
 
 interface NewsResponse {
@@ -55,7 +56,7 @@ export default function Home() {
       if (selectedCategory !== "all") params.set("category", selectedCategory);
       if (searchQuery) params.set("q", searchQuery);
       if (language !== "all") params.set("lang", language);
-      params.set("limit", "80");
+      params.set("limit", "100");
 
       const [res, statsRes] = await Promise.all([
         fetch(`/api/news?${params.toString()}`),
@@ -70,7 +71,7 @@ export default function Home() {
       setCategoryCounts(stats.byCategory || {});
 
       if (selectedCategory !== "all" || searchQuery || language !== "all") {
-        const allRes = await fetch("/api/news?limit=80");
+        const allRes = await fetch("/api/news?limit=100");
         const allData: NewsResponse = await allRes.json();
         setAllArticles(allData.articles);
       } else {
@@ -101,36 +102,62 @@ export default function Home() {
     return () => clearInterval(i);
   }, [triggerFetch]);
 
-  // 3-tier split (memoized)
-  const { heroArticle, heroSourceCount, mediumArticles, normalArticles } = useMemo(() => {
-    const breaking = articles.filter((a) => a.priority === "breaking");
-    const important = articles.filter((a) => a.priority === "important");
-    const normal = articles.filter((a) => a.priority === "normal");
+  // CORE: Cluster articles into events
+  const events = useMemo(() => clusterArticlesIntoEvents(articles), [articles]);
+  const allEvents = useMemo(() => clusterArticlesIntoEvents(allArticles), [allArticles]);
 
-    const hero = breaking[0] || null;
-    const heroCount = hero
-      ? articles.filter(
-          (a) => a.id !== hero.id && a.category === hero.category &&
-            Math.abs(new Date(a.publishedAt).getTime() - new Date(hero.publishedAt).getTime()) < 86400000
-        ).length + 1
-      : 0;
+  // Split events by priority
+  const { heroEvent, trendingEvents, importantEvents, normalEvents } = useMemo(() => {
+    const breaking = events.filter((e) => e.priority === "breaking");
+    const important = events.filter((e) => e.priority === "important");
+    const normal = events.filter((e) => e.priority === "normal");
 
-    const medium = [...breaking.slice(1), ...important].slice(0, 6);
+    // Hero = top breaking event (most sources)
+    const hero = breaking.sort((a, b) => b.sourceCount - a.sourceCount)[0] || null;
 
-    return { heroArticle: hero, heroSourceCount: heroCount, mediumArticles: medium, normalArticles: normal };
-  }, [articles]);
+    // Trending = top events by source count (multi-source events), excluding hero
+    const trending = allEvents
+      .filter((e) => e.id !== hero?.id && e.sourceCount >= 2)
+      .sort((a, b) => b.sourceCount - a.sourceCount)
+      .slice(0, 6);
+
+    // Important = remaining breaking + important events
+    const imp = [...breaking.filter((e) => e.id !== hero?.id), ...important].slice(0, 8);
+
+    return {
+      heroEvent: hero,
+      trendingEvents: trending,
+      importantEvents: imp,
+      normalEvents: normal,
+    };
+  }, [events, allEvents]);
+
+  // Find article by ID for detail view
+  const findArticle = useCallback((id: string) =>
+    articles.find((a) => a.id === id) || allArticles.find((a) => a.id === id),
+    [articles, allArticles]
+  );
+
+  const handleSelectArticle = useCallback((id: string) => {
+    const article = findArticle(id);
+    if (article) setSelectedArticle(article);
+  }, [findArticle]);
+
+  const handleSelectEvent = useCallback((event: NewsEvent) => {
+    setSelectedArticle(event.leadArticle);
+  }, []);
 
   const getRelated = useCallback((a: Article) =>
     articles
       .filter((x) => x.id !== a.id && x.category === a.category &&
         Math.abs(new Date(x.publishedAt).getTime() - new Date(a.publishedAt).getTime()) < 86400000)
-      .slice(0, 5),
+      .slice(0, 8),
     [articles]
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg)] transition-colors">
+      <div className="min-h-screen bg-[var(--color-bg)]">
         <Header onSearch={() => {}} onLanguageChange={() => {}} onRefresh={() => {}} totalArticles={0} isLoading={true} currentLang="all" darkMode={darkMode} onToggleDark={toggleDark} />
         <LoadingSkeleton />
       </div>
@@ -152,12 +179,12 @@ export default function Home() {
 
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} counts={categoryCounts} />
 
-      <main className="max-w-6xl mx-auto px-4 pt-5 pb-10">
+      <main className="max-w-6xl mx-auto px-4 pt-5 pb-12">
         {/* Update indicator */}
         {fetching && (
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] mb-3">
             <RefreshCw className="w-3 h-3 animate-spin" />
-            <span>Guncelleniyor...</span>
+            Kaynaklar kontrol ediliyor...
           </div>
         )}
 
@@ -171,45 +198,53 @@ export default function Home() {
           </div>
         )}
 
-        {articles.length === 0 && !error ? (
+        {events.length === 0 && !error ? (
           <div className="flex flex-col items-center py-24 text-center fade-in">
             <Newspaper className="w-10 h-10 text-[var(--color-text-muted)] mb-3" />
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              {searchQuery ? `"${searchQuery}" icin sonuc bulunamadi.` : "Haberler yukleniyor..."}
+              {searchQuery ? `"${searchQuery}" icin sonuc bulunamadi.` : "Kaynaklar taranıyor..."}
             </p>
             <button onClick={triggerFetch} className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent-hover)] transition-colors">
               Haberleri Yukle
             </button>
           </div>
         ) : (
-          <div className="space-y-6 fade-in">
-            {/* HERO */}
-            {heroArticle && (
-              <HeroSection article={heroArticle} sourceCount={heroSourceCount} onSelect={setSelectedArticle} />
+          <div className="space-y-8 fade-in">
+
+            {/* === 1. LIVE HERO === */}
+            {heroEvent && (
+              <LiveHero event={heroEvent} onSelectArticle={handleSelectArticle} />
             )}
 
-            {/* TRENDING */}
-            <TrendingBar articles={allArticles} onSelect={setSelectedArticle} />
+            {/* === 2. TRENDING NOW === */}
+            {trendingEvents.length > 0 && (
+              <TrendingEvents events={trendingEvents} onSelectEvent={handleSelectEvent} />
+            )}
 
-            {/* IMPORTANT */}
-            {mediumArticles.length > 0 && (
+            {/* === 3. IMPORTANT EVENTS === */}
+            {importantEvents.length > 0 && (
               <section>
-                <SectionLabel title="Onemli Haberler" icon={<Zap className="w-3.5 h-3.5" />} count={mediumArticles.length} />
+                <SectionLabel title="Onemli Gelismeler" icon={<Zap className="w-3.5 h-3.5" />} count={importantEvents.length} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {mediumArticles.map((article) => (
-                    <MediumCard key={article.id} article={article} onSelect={setSelectedArticle} />
+                  {importantEvents.map((event) => (
+                    <EventCard key={event.id} event={event} onSelect={handleSelectEvent} />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* LATEST */}
-            {normalArticles.length > 0 && (
+            {/* === 4. LATEST EVENTS === */}
+            {normalEvents.length > 0 && (
               <section>
-                <SectionLabel title="Son Haberler" icon={<List className="w-3.5 h-3.5" />} count={normalArticles.length} />
+                <SectionLabel title="Son Gelismeler" icon={<List className="w-3.5 h-3.5" />} count={normalEvents.length} />
                 <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
-                  {normalArticles.map((article) => (
-                    <CompactCard key={article.id} article={article} onSelect={setSelectedArticle} />
+                  {normalEvents.map((event) => (
+                    <CompactCard
+                      key={event.id}
+                      article={event.leadArticle}
+                      onSelect={setSelectedArticle}
+                      sourceCount={event.sourceCount}
+                    />
                   ))}
                 </div>
               </section>
@@ -228,9 +263,9 @@ export default function Home() {
         />
       )}
 
-      <footer className="border-t border-[var(--color-border)] py-6 text-center">
-        <p className="text-[11px] text-[var(--color-text-muted)]">
-          2Vibe News — AI destekli haber istihbarat platformu. Haberler orijinal kaynaklarina aittir.
+      <footer className="border-t border-[var(--color-border)] py-5 text-center">
+        <p className="text-[10px] text-[var(--color-text-muted)] tracking-wide">
+          2Vibe News — AI destekli haber istihbarat platformu
         </p>
       </footer>
     </div>
