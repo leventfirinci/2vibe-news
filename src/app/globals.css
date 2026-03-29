@@ -1,25 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  /* Light mode */
-  --color-bg: #fafafa;
+  /* === DESIGN SYSTEM === */
+  /* Light Mode */
+  --color-bg: #f8f9fa;
   --color-bg-card: #ffffff;
-  --color-bg-hover: #f5f5f5;
-  --color-bg-secondary: #f0f0f0;
+  --color-bg-hover: #f1f3f5;
+  --color-bg-secondary: #e9ecef;
   --color-bg-elevated: #ffffff;
-  --color-accent: #e8562a;
-  --color-accent-light: #fff0eb;
-  --color-text: #1a1a1a;
-  --color-text-secondary: #666666;
-  --color-text-muted: #999999;
-  --color-border: #e8e8e8;
-  --color-border-light: #f0f0f0;
-  --color-green: #16a34a;
-  --color-green-bg: #f0fdf4;
-  --color-yellow: #ca8a04;
-  --color-yellow-bg: #fefce8;
+  --color-accent: #d94a1e;
+  --color-accent-hover: #c43d14;
+  --color-accent-light: #fff4f0;
+  --color-text: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-green: #059669;
+  --color-green-bg: #ecfdf5;
+  --color-yellow: #d97706;
+  --color-yellow-bg: #fffbeb;
   --color-red: #dc2626;
-  --color-red-dark: #b91c1c;
+  --color-red-dark: #991b1b;
   --color-red-bg: #fef2f2;
   --color-blue: #2563eb;
   --color-blue-bg: #eff6ff;
@@ -30,65 +32,68 @@ html { scroll-behavior: smooth; }
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s, color 0.3s;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Dark mode overrides */
+/* === DARK MODE === */
 html.dark {
-  --color-bg: #0c0c14;
-  --color-bg-card: #14142a;
-  --color-bg-hover: #1c1c38;
-  --color-bg-secondary: #18182e;
-  --color-bg-elevated: #1a1a36;
-  --color-accent: #ff6b3a;
-  --color-accent-light: rgba(255, 107, 58, 0.12);
-  --color-text: #e8e8f0;
-  --color-text-secondary: #9898b0;
-  --color-text-muted: #5a5a78;
-  --color-border: #2a2a48;
-  --color-border-light: #222240;
-  --color-green: #4ade80;
-  --color-green-bg: rgba(74, 222, 128, 0.1);
+  --color-bg: #09090b;
+  --color-bg-card: #111113;
+  --color-bg-hover: #1a1a1f;
+  --color-bg-secondary: #141417;
+  --color-bg-elevated: #18181c;
+  --color-accent: #ef6a3a;
+  --color-accent-hover: #f07d52;
+  --color-accent-light: rgba(239, 106, 58, 0.08);
+  --color-text: #f0f0f2;
+  --color-text-secondary: #8b8b98;
+  --color-text-muted: #52525b;
+  --color-border: #1f1f25;
+  --color-border-light: #18181c;
+  --color-green: #34d399;
+  --color-green-bg: rgba(52, 211, 153, 0.08);
   --color-yellow: #fbbf24;
-  --color-yellow-bg: rgba(251, 191, 36, 0.1);
+  --color-yellow-bg: rgba(251, 191, 36, 0.08);
   --color-red: #f87171;
-  --color-red-dark: #991b1b;
-  --color-red-bg: rgba(248, 113, 113, 0.1);
+  --color-red-dark: #7f1d1d;
+  --color-red-bg: rgba(248, 113, 113, 0.06);
   --color-blue: #60a5fa;
-  --color-blue-bg: rgba(96, 165, 250, 0.1);
+  --color-blue-bg: rgba(96, 165, 250, 0.08);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
+/* === SCROLLBAR === */
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Animations */
+/* === ANIMATIONS === */
 @keyframes live-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.3; }
 }
-.live-pulse { animation: live-pulse 2s ease-in-out infinite; }
+.live-pulse { animation: live-pulse 1.5s ease-in-out infinite; }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fade-in { animation: fade-in 0.3s ease-out; }
+.fade-in { animation: fade-in 0.25s ease-out; }
 
 @keyframes slide-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
 }
-.slide-in { animation: slide-in 0.25s ease-out; }
+.slide-in { animation: slide-in 0.2s ease-out; }
 
 @keyframes scale-in {
-  from { transform: scale(0.97); opacity: 0; }
+  from { transform: scale(0.98); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 .scale-in { animation: scale-in 0.2s ease-out; }
@@ -101,13 +106,27 @@ html.dark {
   background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-bg-hover) 50%, var(--color-bg-secondary) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: 0.375rem;
+  border-radius: 6px;
 }
 
-/* Hero gradient overlay */
+/* === HERO GRADIENT === */
 .gradient-overlay {
-  background: linear-gradient(to right, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.15) 100%);
+  background: linear-gradient(135deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0.1) 100%);
 }
 html.dark .gradient-overlay {
-  background: linear-gradient(to right, rgba(12,12,20,0.95) 0%, rgba(12,12,20,0.6) 50%, rgba(12,12,20,0.2) 100%);
+  background: linear-gradient(135deg, rgba(9,9,11,0.96) 0%, rgba(9,9,11,0.65) 40%, rgba(9,9,11,0.15) 100%);
+}
+
+/* === GLASS EFFECT === */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* === FOCUS RING === */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

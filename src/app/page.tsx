@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Header from "@/components/Header";
 import CategoryBar from "@/components/CategoryBar";
 import HeroSection from "@/components/HeroSection";
@@ -34,7 +34,6 @@ export default function Home() {
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [darkMode, setDarkMode] = useState(false);
 
-  // Dark mode
   useEffect(() => {
     const saved = localStorage.getItem("2vibe-dark");
     if (saved === "true" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
@@ -58,12 +57,18 @@ export default function Home() {
       if (language !== "all") params.set("lang", language);
       params.set("limit", "80");
 
-      const res = await fetch(`/api/news?${params.toString()}`);
+      const [res, statsRes] = await Promise.all([
+        fetch(`/api/news?${params.toString()}`),
+        fetch("/api/news?stats=true"),
+      ]);
+
       if (!res.ok) throw new Error("Failed");
       const data: NewsResponse = await res.json();
       setArticles(data.articles);
 
-      // Also fetch all articles for trending (unfiltered)
+      const stats = await statsRes.json();
+      setCategoryCounts(stats.byCategory || {});
+
       if (selectedCategory !== "all" || searchQuery || language !== "all") {
         const allRes = await fetch("/api/news?limit=80");
         const allData: NewsResponse = await allRes.json();
@@ -72,9 +77,6 @@ export default function Home() {
         setAllArticles(data.articles);
       }
 
-      const statsRes = await fetch("/api/news?stats=true");
-      const stats = await statsRes.json();
-      setCategoryCounts(stats.byCategory || {});
       setError(null);
     } catch {
       setError("Haberler yuklenemedi.");
@@ -88,7 +90,7 @@ export default function Home() {
     try {
       await fetch("/api/rss-fetch");
       await fetchNews();
-    } catch { /* ignore */ }
+    } catch { /* network error */ }
     finally { setFetching(false); }
   }, [fetchNews]);
 
@@ -99,34 +101,32 @@ export default function Home() {
     return () => clearInterval(i);
   }, [triggerFetch]);
 
-  // 3-tier article split
-  const breakingArticles = articles.filter((a) => a.priority === "breaking");
-  const importantArticles = articles.filter((a) => a.priority === "important");
-  const normalArticles = articles.filter((a) => a.priority === "normal");
+  // 3-tier split (memoized)
+  const { heroArticle, heroSourceCount, mediumArticles, normalArticles } = useMemo(() => {
+    const breaking = articles.filter((a) => a.priority === "breaking");
+    const important = articles.filter((a) => a.priority === "important");
+    const normal = articles.filter((a) => a.priority === "normal");
 
-  const heroArticle = breakingArticles[0] || null;
-  const heroSourceCount = heroArticle
-    ? articles.filter(
-        (a) =>
-          a.id !== heroArticle.id &&
-          a.category === heroArticle.category &&
-          Math.abs(new Date(a.publishedAt).getTime() - new Date(heroArticle.publishedAt).getTime()) < 86400000
-      ).length + 1
-    : 0;
+    const hero = breaking[0] || null;
+    const heroCount = hero
+      ? articles.filter(
+          (a) => a.id !== hero.id && a.category === hero.category &&
+            Math.abs(new Date(a.publishedAt).getTime() - new Date(hero.publishedAt).getTime()) < 86400000
+        ).length + 1
+      : 0;
 
-  // Remaining breaking articles (after hero) go into important
-  const remainingBreaking = breakingArticles.slice(1);
-  const mediumArticles = [...remainingBreaking, ...importantArticles].slice(0, 6);
+    const medium = [...breaking.slice(1), ...important].slice(0, 6);
 
-  const getRelated = (a: Article) =>
+    return { heroArticle: hero, heroSourceCount: heroCount, mediumArticles: medium, normalArticles: normal };
+  }, [articles]);
+
+  const getRelated = useCallback((a: Article) =>
     articles
-      .filter(
-        (x) =>
-          x.id !== a.id &&
-          x.category === a.category &&
-          Math.abs(new Date(x.publishedAt).getTime() - new Date(a.publishedAt).getTime()) < 86400000
-      )
-      .slice(0, 5);
+      .filter((x) => x.id !== a.id && x.category === a.category &&
+        Math.abs(new Date(x.publishedAt).getTime() - new Date(a.publishedAt).getTime()) < 86400000)
+      .slice(0, 5),
+    [articles]
+  );
 
   if (loading) {
     return (
@@ -152,18 +152,18 @@ export default function Home() {
 
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} counts={categoryCounts} />
 
-      <main className="max-w-6xl mx-auto px-4 py-5">
-        {/* Updating indicator */}
+      <main className="max-w-6xl mx-auto px-4 pt-5 pb-10">
+        {/* Update indicator */}
         {fetching && (
-          <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] mb-4">
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] mb-3">
             <RefreshCw className="w-3 h-3 animate-spin" />
-            Guncelleniyor...
+            <span>Guncelleniyor...</span>
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="text-center py-10">
+          <div className="text-center py-16">
             <p className="text-sm text-[var(--color-red)] mb-3">{error}</p>
             <button onClick={triggerFetch} className="text-sm text-[var(--color-accent)] font-medium hover:underline">
               Tekrar dene
@@ -172,64 +172,44 @@ export default function Home() {
         )}
 
         {articles.length === 0 && !error ? (
-          <div className="flex flex-col items-center py-20 text-center fade-in">
-            <Newspaper className="w-12 h-12 text-[var(--color-text-muted)] mb-3" />
-            <p className="text-[var(--color-text-secondary)] mb-4">
+          <div className="flex flex-col items-center py-24 text-center fade-in">
+            <Newspaper className="w-10 h-10 text-[var(--color-text-muted)] mb-3" />
+            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
               {searchQuery ? `"${searchQuery}" icin sonuc bulunamadi.` : "Haberler yukleniyor..."}
             </p>
-            <button onClick={triggerFetch} className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium">
+            <button onClick={triggerFetch} className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent-hover)] transition-colors">
               Haberleri Yukle
             </button>
           </div>
         ) : (
-          <div className="space-y-8 fade-in">
-            {/* HERO: Breaking news */}
+          <div className="space-y-6 fade-in">
+            {/* HERO */}
             {heroArticle && (
-              <HeroSection
-                article={heroArticle}
-                sourceCount={heroSourceCount}
-                onSelect={setSelectedArticle}
-              />
+              <HeroSection article={heroArticle} sourceCount={heroSourceCount} onSelect={setSelectedArticle} />
             )}
 
             {/* TRENDING */}
             <TrendingBar articles={allArticles} onSelect={setSelectedArticle} />
 
-            {/* IMPORTANT: Medium cards */}
+            {/* IMPORTANT */}
             {mediumArticles.length > 0 && (
               <section>
-                <SectionLabel
-                  title="Onemli Haberler"
-                  icon={<Zap className="w-4 h-4" />}
-                  count={mediumArticles.length}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SectionLabel title="Onemli Haberler" icon={<Zap className="w-3.5 h-3.5" />} count={mediumArticles.length} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {mediumArticles.map((article) => (
-                    <MediumCard
-                      key={article.id}
-                      article={article}
-                      onSelect={setSelectedArticle}
-                    />
+                    <MediumCard key={article.id} article={article} onSelect={setSelectedArticle} />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* NORMAL: Compact list */}
+            {/* LATEST */}
             {normalArticles.length > 0 && (
               <section>
-                <SectionLabel
-                  title="Son Haberler"
-                  icon={<List className="w-4 h-4" />}
-                  count={normalArticles.length}
-                />
+                <SectionLabel title="Son Haberler" icon={<List className="w-3.5 h-3.5" />} count={normalArticles.length} />
                 <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
                   {normalArticles.map((article) => (
-                    <CompactCard
-                      key={article.id}
-                      article={article}
-                      onSelect={setSelectedArticle}
-                    />
+                    <CompactCard key={article.id} article={article} onSelect={setSelectedArticle} />
                   ))}
                 </div>
               </section>
@@ -238,7 +218,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* Article detail panel */}
+      {/* Detail panel */}
       {selectedArticle && (
         <ArticleDetail
           article={selectedArticle}
@@ -248,8 +228,10 @@ export default function Home() {
         />
       )}
 
-      <footer className="border-t border-[var(--color-border)] mt-10 py-6 text-center text-xs text-[var(--color-text-muted)] transition-colors">
-        <p>2Vibe News — AI destekli haber platformu. Haberler orijinal kaynaklarina aittir.</p>
+      <footer className="border-t border-[var(--color-border)] py-6 text-center">
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          2Vibe News — AI destekli haber istihbarat platformu. Haberler orijinal kaynaklarina aittir.
+        </p>
       </footer>
     </div>
   );
