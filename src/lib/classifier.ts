@@ -142,24 +142,39 @@ const CATEGORY_KEYWORDS: Record<Exclude<Category, "breaking">, { tr: string[]; e
   },
 };
 
-// Words that should NEVER trigger technology category
-const TECH_FALSE_POSITIVES = [
-  // These words exist in tech but also in world/politics news
-  "apple", "google", "microsoft", "tesla", // company names used in non-tech context
-  "strike", "attack", "hack", // ambiguous
-];
-
-// If these words appear alongside a "tech" company name, it's NOT tech news
-const NON_TECH_CONTEXT = [
-  "saldırı", "savaş", "öldü", "öldürüldü", "öldürdü", "bomba", "füze",
-  "askeri", "ordu", "vuruyor", "vurdu", "vuruldu", "yaralı", "yaralandı",
-  "şehit", "patlama", "bombardıman", "çatışma", "ateşkes", "hava saldırısı",
-  "gazeteci öldü", "sivil kayıp", "petrol tesisi",
-  "killed", "war", "bomb", "missile", "military", "troops", "invasion",
-  "strike on", "attack on", "airstrike", "wounded", "injured", "casualties",
-  "kınadı", "condemned", "sanctions", "yaptırım",
+// VIOLENCE / CRIME / WAR context — these override soft categories
+// If any of these words appear, the article is NOT about economy/tech/culture/sports
+const VIOLENCE_CONTEXT = [
+  // Turkish violence/crime
+  "öldü", "öldürüldü", "öldürdü", "cinayet", "katil", "katliam", "katletti",
+  "hayatını kaybetti", "saldırı", "bıçakladı", "bıçaklandı", "tecavüz",
+  "şiddet", "vahşet", "infaz", "suç", "suçlu", "ceset", "boğdu",
+  "vurdu", "vuruldu", "vuruyor", "ateş açtı", "silahla", "tüfekle",
+  "yaralı", "yaralandı", "şehit", "kurban", "maktul",
+  // Turkish war/conflict
+  "savaş", "bomba", "füze", "bombardıman", "çatışma", "ateşkes",
+  "askeri", "ordu", "hava saldırısı", "patlama", "terör", "terörist",
+  // Turkish disaster
+  "deprem", "sel", "yangın", "afet", "tsunami", "felaket",
+  // English violence/crime
+  "killed", "murder", "murdered", "stabbed", "shot", "shooting",
+  "death", "died", "dead", "victim", "homicide", "assault",
+  "violence", "attacked", "attacker",
+  // English war/conflict
+  "war", "bomb", "bombing", "missile", "military", "troops", "invasion",
+  "airstrike", "strike on", "attack on", "wounded", "injured", "casualties",
+  "conflict", "combat", "shelling",
+  // English disaster
+  "earthquake", "flood", "fire", "disaster", "tsunami",
+  // Geopolitical entities in conflict context
   "israil", "israel", "iran", "hamas", "hizbullah", "hezbollah",
   "gaza", "lübnan", "lebanon", "tahran", "tehran", "hayfa", "haifa",
+];
+
+// Categories that should be BLOCKED when violence context is detected
+// These categories are "soft" — they should not override violence/world/politics
+const VIOLENCE_BLOCKED_CATEGORIES: Category[] = [
+  "economy", "technology", "sports", "science", "health", "culture",
 ];
 
 const BREAKING_KEYWORDS = {
@@ -181,12 +196,14 @@ export function classifyCategory(
   const text = `${title} ${snippet}`.toLowerCase();
   const titleLower = title.toLowerCase();
 
-  // If default is "breaking", change to "world" as fallback
-  // because "breaking" is priority, not topic
+  // Step 0: "breaking" is priority, not topic
   const fallback = defaultCategory === "breaking" ? "world" : defaultCategory;
 
-  let bestCategory: Category = fallback;
-  let bestScore = 0;
+  // Step 1: Detect violence/crime/war context FIRST
+  const hasViolence = VIOLENCE_CONTEXT.some((w) => text.includes(w.toLowerCase()));
+
+  // Step 2: Score all categories
+  const scores: { category: Category; score: number }[] = [];
 
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     let score = 0;
@@ -195,45 +212,35 @@ export function classifyCategory(
     for (const kw of allKeywords) {
       const kwLower = kw.toLowerCase();
       if (text.includes(kwLower)) {
-        // Title matches count 3x
-        if (titleLower.includes(kwLower)) {
-          score += 3;
-        } else {
-          score += 1;
-        }
+        score += titleLower.includes(kwLower) ? 3 : 1;
       }
     }
 
-    // Special: If classified as technology, check for false positives
-    if (category === "technology" && score > 0) {
-      const hasNonTechContext = NON_TECH_CONTEXT.some((w) => text.includes(w.toLowerCase()));
-      if (hasNonTechContext) {
-        // War/conflict context — this is NOT tech news
-        score = 0;
-      }
+    // Step 3: If violence detected, BLOCK soft categories
+    if (hasViolence && VIOLENCE_BLOCKED_CATEGORIES.includes(category as Category)) {
+      score = 0; // Kill the score — this is NOT economy/tech/sports news
     }
 
-    if (score > bestScore) {
-      bestScore = score;
-      bestCategory = category as Category;
-    }
+    scores.push({ category: category as Category, score });
   }
 
-  // Minimum threshold: need at least 2 points to override default
-  if (bestScore < 2) {
-    // Even if using fallback, check if content is actually about war/conflict
-    // If the source default is technology but content is about war → force to world
-    const hasWarContext = NON_TECH_CONTEXT.some((w) => text.includes(w.toLowerCase()));
-    const hasWorldKeywords = [...CATEGORY_KEYWORDS.world.tr, ...CATEGORY_KEYWORDS.world.en]
-      .some((kw) => text.includes(kw.toLowerCase()));
+  // Sort by score descending
+  scores.sort((a, b) => b.score - a.score);
+  const best = scores[0];
 
-    if (hasWarContext && hasWorldKeywords && (fallback === "technology" || fallback === "culture" || fallback === "science")) {
-      return "world";
+  // Step 4: Minimum threshold — need 2+ points
+  if (!best || best.score < 2) {
+    // If violence detected and fallback is a soft category, override to world/politics
+    if (hasViolence && VIOLENCE_BLOCKED_CATEGORIES.includes(fallback)) {
+      // Check if it has world or politics keywords
+      const worldScore = scores.find((s) => s.category === "world")?.score || 0;
+      const politicsScore = scores.find((s) => s.category === "politics")?.score || 0;
+      return politicsScore > worldScore ? "politics" : "world";
     }
     return fallback;
   }
 
-  return bestCategory;
+  return best.category;
 }
 
 export function detectPriority(
