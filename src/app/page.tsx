@@ -276,34 +276,45 @@ export default function Home() {
               </section>
             )}
 
-            {/* === 3. MOST DISCUSSED === */}
+            {/* === 3. MOST DISCUSSED — visual grid with images === */}
             {mostDiscussedEvents.length > 0 && (
               <section>
                 <SectionLabel title="En Cok Konusulan" icon={<MessageCircle className="w-3.5 h-3.5" />} count={mostDiscussedEvents.length} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {mostDiscussedEvents.map((event, i) => {
                     const cat = CATEGORIES.find((c) => c.id === event.category);
                     return (
                       <button
                         key={event.id}
                         onClick={() => handleSelectEvent(event)}
-                        className="text-left bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-3.5 hover:border-[var(--color-accent)]/20 transition-all group relative overflow-hidden"
+                        className="text-left rounded-xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-accent)]/20 transition-all group relative"
                       >
-                        <div className="absolute top-2.5 right-3 text-[28px] font-black text-[var(--color-border)] select-none leading-none">
-                          {i + 1}
-                        </div>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat?.color }} />
-                          <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{cat?.labelTr}</span>
-                          <span className="flex items-center gap-0.5 text-[10px] text-[var(--color-accent)] font-bold ml-auto mr-6">
+                        {/* Image or gradient placeholder */}
+                        <div className="relative h-32 overflow-hidden bg-[var(--color-bg-secondary)]">
+                          {event.imageUrl ? (
+                            <img src={event.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          ) : (
+                            <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${cat?.color}20 0%, ${cat?.color}08 100%)` }} />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                          {/* Rank number */}
+                          <div className="absolute top-2 left-2.5 text-[24px] font-black text-white/30 leading-none">{i + 1}</div>
+                          {/* Source count */}
+                          <div className="absolute top-2 right-2.5 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded">
                             <MessageCircle className="w-2.5 h-2.5" />
-                            {event.sourceCount} kaynak
-                          </span>
+                            {event.sourceCount}
+                          </div>
                         </div>
-                        <p className="text-[13px] font-semibold text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors pr-4">
-                          {event.title}
-                        </p>
-                        <span className="text-[10px] text-[var(--color-text-muted)] mt-1.5 block">{event.leadArticle.sourceName}</span>
+                        <div className="p-3 bg-[var(--color-bg-card)]">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat?.color }} />
+                            <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{cat?.labelTr}</span>
+                          </div>
+                          <p className="text-[13px] font-semibold text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors">
+                            {event.title}
+                          </p>
+                          <span className="text-[10px] text-[var(--color-text-muted)] mt-1 block">{event.leadArticle.sourceName}</span>
+                        </div>
                       </button>
                     );
                   })}
@@ -323,19 +334,47 @@ export default function Home() {
               </section>
             )}
 
-            {/* === 5. LATEST EVENTS === */}
+            {/* === 5. LATEST EVENTS — mini cards with images === */}
             {normalEvents.length > 0 && (
               <section>
                 <SectionLabel title="Son Gelismeler" icon={<List className="w-3.5 h-3.5" />} count={normalEvents.length} />
-                <div className="bg-[var(--color-bg-card)] rounded-xl border border-[var(--color-border)] overflow-hidden">
-                  {normalEvents.map((event) => (
-                    <CompactCard
-                      key={event.id}
-                      article={event.leadArticle}
-                      onSelect={handleCompactClick}
-                      sourceCount={event.sourceCount}
-                    />
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {normalEvents.slice(0, 15).map((event) => {
+                    const cat = CATEGORIES.find((c) => c.id === event.leadArticle.category);
+                    const hasImg = !!event.imageUrl;
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => handleSelectEvent(event)}
+                        className="flex items-start gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2.5 hover:border-[var(--color-accent)]/15 transition-all text-left group"
+                      >
+                        {/* Thumbnail */}
+                        <div className="w-20 h-16 rounded-lg overflow-hidden shrink-0 bg-[var(--color-bg-secondary)]">
+                          {hasImg ? (
+                            <img src={event.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.background = `linear-gradient(135deg, ${cat?.color}25 0%, ${cat?.color}08 100%)`; (e.target as HTMLImageElement).style.display = "none"; }} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${cat?.color}20 0%, ${cat?.color}08 100%)` }}>
+                              <span className="text-[16px] opacity-40">{cat?.icon}</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Text */}
+                        <div className="flex-1 min-w-0 py-0.5">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="w-1 h-1 rounded-full" style={{ backgroundColor: cat?.color }} />
+                            <span className="text-[9px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{cat?.labelTr}</span>
+                            {event.sourceCount > 1 && (
+                              <span className="text-[9px] text-[var(--color-accent)] font-semibold ml-auto">{event.sourceCount} kaynak</span>
+                            )}
+                          </div>
+                          <p className="text-[12px] font-medium text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors">
+                            {event.title}
+                          </p>
+                          <span className="text-[9px] text-[var(--color-text-muted)] mt-0.5 block">{event.leadArticle.sourceName}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
             )}
