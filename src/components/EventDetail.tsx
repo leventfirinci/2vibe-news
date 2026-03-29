@@ -3,7 +3,7 @@
 import { NewsEvent } from "@/lib/event-cluster";
 import { CATEGORIES } from "@/data/sources";
 import ReliabilityBadge from "./ReliabilityBadge";
-import ImpactBadges from "./ImpactBadges";
+// ImpactBadges removed — will re-enable when classification is accurate
 import { X, Clock, Radio, Users, Lightbulb, ArrowRight, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -128,16 +128,6 @@ export default function EventDetail({ event, onClose }: EventDetailProps) {
               <p className="text-sm text-[var(--color-accent)] leading-relaxed">
                 {event.whyItMatters}
               </p>
-            </div>
-          )}
-
-          {/* === IMPACT AREAS === */}
-          {(event.impactAreas?.length > 0 || event.secondaryCategories?.length > 0) && (
-            <div>
-              <span className="text-[11px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider block mb-2">
-                Etki Alanlari
-              </span>
-              <ImpactBadges impactAreas={event.impactAreas || []} secondaryCategories={event.secondaryCategories || []} size="md" />
             </div>
           )}
 

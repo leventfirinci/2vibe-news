@@ -7,19 +7,16 @@ import { Category, Language, Priority, ImpactArea } from "@/lib/types";
 const CATEGORY_KEYWORDS: Record<Exclude<Category, "breaking">, { tr: string[]; en: string[] }> = {
   economy: {
     tr: [
-      "ekonomi", "dolar", "euro", "faiz", "enflasyon", "borsa",
-      "merkez bankası", "tcmb", "bütçe", "vergi", "ihracat",
-      "ithalat", "büyüme", "gsyh", "işsizlik", "maaş", "zam",
-      "tüik", "asgari ücret", "döviz", "altın", "piyasa",
-      "hazine", "maliye", "şirket", "gelir", "gider",
-      "yatırım", "kredi", "banka", "sigorta",
+      // STRICT: Only core financial terms. No general words like "şirket", "gelir"
+      "ekonomi", "faiz", "enflasyon", "borsa", "merkez bankası", "tcmb",
+      "bütçe", "ihracat", "ithalat", "gsyh", "asgari ücret", "döviz kuru",
+      "piyasa endeksi", "hazine", "maliye bakanlığı", "tüik",
     ],
     en: [
-      "economy", "dollar", "euro", "interest rate", "inflation",
-      "stock market", "fed", "gdp", "unemployment", "trade",
-      "tariff", "budget", "tax", "fiscal", "monetary", "wall street",
-      "nasdaq", "dow jones", "cryptocurrency", "bitcoin",
-      "revenue", "profit", "earnings", "investment", "bond",
+      // STRICT: Only core financial terms
+      "economy", "interest rate", "inflation", "stock market", "fed",
+      "gdp", "fiscal", "monetary", "wall street", "nasdaq", "dow jones",
+      "earnings report", "revenue growth", "bond yield",
     ],
   },
   politics: {
@@ -272,43 +269,15 @@ export function detectPriority(
 }
 
 /**
- * Detect secondary categories.
- * RULE: Violence/crime/disaster → NO secondary categories at all.
- * RULE: Economy only if 5+ strong financial keyword matches.
- * RULE: Accuracy > quantity. Return empty array if unsure.
+ * DISABLED — secondary categories removed from UI.
+ * Always returns empty array. Will be re-enabled when classification is more accurate.
  */
 export function detectSecondaryCategories(
-  title: string,
-  snippet: string,
-  primaryCategory: Category
+  _title: string,
+  _snippet: string,
+  _primaryCategory: Category
 ): Category[] {
-  const text = `${title} ${snippet}`.toLowerCase();
-
-  // HARD RULE: Violence/crime/disaster/death → ZERO secondary categories
-  const hasViolence = VIOLENCE_CONTEXT.some((w) => text.includes(w.toLowerCase()));
-  if (hasViolence) return [];
-
-  const secondary: Category[] = [];
-
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (category === primaryCategory) continue;
-    if (category === "breaking") continue;
-
-    let score = 0;
-    const allKeywords = [...keywords.tr, ...keywords.en];
-    for (const kw of allKeywords) {
-      if (text.includes(kw.toLowerCase())) score++;
-    }
-
-    // Economy needs 5+ matches (very strict — only truly financial news)
-    if (category === "economy" && score < 5) continue;
-    // All others need 4+ matches
-    if (category !== "economy" && score < 4) continue;
-
-    secondary.push(category as Category);
-  }
-
-  return secondary.slice(0, 1); // Max 1 secondary (less noise, more trust)
+  return [];
 }
 
 /**
@@ -359,33 +328,9 @@ const IMPACT_KEYWORDS: Record<ImpactArea, string[]> = {
 };
 
 /**
- * Detect impact areas.
- * RULE: Violence/crime/disaster → only security + humanitarian allowed.
- * RULE: No "economic" impact for murder/earthquake/terror.
- * RULE: Threshold 3+ (was 2).
- * RULE: Max 2 impact areas.
+ * DISABLED — impact areas removed from UI.
+ * Always returns empty array. Will be re-enabled when classification is more accurate.
  */
-export function detectImpactAreas(title: string, snippet: string): ImpactArea[] {
-  const text = `${title} ${snippet}`.toLowerCase();
-  const hasViolence = VIOLENCE_CONTEXT.some((w) => text.includes(w.toLowerCase()));
-  const impacts: { area: ImpactArea; score: number }[] = [];
-
-  // Impact areas that are BLOCKED during violence/crime/disaster
-  const violenceBlockedImpacts: ImpactArea[] = ["economic", "technological", "environmental"];
-
-  for (const [area, keywords] of Object.entries(IMPACT_KEYWORDS)) {
-    // Block irrelevant impacts during violence
-    if (hasViolence && violenceBlockedImpacts.includes(area as ImpactArea)) continue;
-
-    let score = 0;
-    for (const kw of keywords) {
-      if (text.includes(kw)) score++;
-    }
-    if (score >= 3) { // Raised from 2 to 3
-      impacts.push({ area: area as ImpactArea, score });
-    }
-  }
-
-  impacts.sort((a, b) => b.score - a.score);
-  return impacts.slice(0, 2).map((i) => i.area);
+export function detectImpactAreas(_title: string, _snippet: string): ImpactArea[] {
+  return [];
 }

@@ -3,7 +3,7 @@
 import { NewsEvent } from "@/lib/event-cluster";
 import { CATEGORIES } from "@/data/sources";
 import ReliabilityBadge from "./ReliabilityBadge";
-import ImpactBadges from "./ImpactBadges";
+// ImpactBadges removed — will re-enable when classification is accurate
 import { Radio, Clock, Users, Lightbulb, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -70,13 +70,6 @@ export default function LiveHero({ event, onSelectArticle }: LiveHeroProps) {
         <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white leading-[1.1] mb-3 max-w-3xl tracking-tight">
           {event.title}
         </h1>
-
-        {/* Impact areas */}
-        {(event.impactAreas?.length > 0 || event.secondaryCategories?.length > 0) && (
-          <div className="mb-3">
-            <ImpactBadges impactAreas={event.impactAreas || []} secondaryCategories={event.secondaryCategories || []} size="md" />
-          </div>
-        )}
 
         {/* Summary */}
         {event.summary && (
