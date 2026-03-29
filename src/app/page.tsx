@@ -168,34 +168,34 @@ export default function Home() {
             {mainEvents.length > 0 && (
               <section>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {mainEvents.map((event) => {
+                  {mainEvents.slice(0, 5).map((event, idx) => {
                     const cat = CATEGORIES.find((c) => c.id === event.category);
+                    const isLead = idx === 0;
                     return (
                       <button
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className="text-left rounded-2xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-accent)]/20 hover:shadow-lg transition-all group bg-[var(--color-bg-card)]"
+                        className={`text-left rounded-2xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-accent)]/20 hover:shadow-xl transition-all group bg-[var(--color-bg-card)] ${
+                          isLead ? "sm:col-span-2 sm:row-span-2" : ""
+                        }`}
                       >
-                        {/* Image — always visible */}
-                        <div className="relative h-44 overflow-hidden">
+                        {/* Image */}
+                        <div className={`relative overflow-hidden ${isLead ? "h-56 sm:h-72" : "h-40"}`}>
                           <EventImage src={event.imageUrl} category={event.category} title={event.title} className="w-full h-full transition-transform duration-500 group-hover:scale-[1.04]" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
-                          {/* Category pill on image */}
                           <div className="absolute bottom-2.5 left-2.5">
                             <span className="text-[10px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded" style={{ borderLeft: `2px solid ${cat?.color}` }}>
                               {cat?.labelTr}
                             </span>
                           </div>
 
-                          {/* Source count */}
                           {event.sourceCount > 1 && (
                             <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white/90 text-[10px] font-semibold px-2 py-0.5 rounded">
                               <Users className="w-2.5 h-2.5" /> {event.sourceCount}
                             </div>
                           )}
 
-                          {/* Breaking indicator */}
                           {event.priority === "breaking" && (
                             <div className="absolute top-2.5 left-2.5 flex items-center gap-1 bg-[var(--color-red)] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
                               <span className="w-1 h-1 rounded-full bg-white live-pulse" /> Canli
@@ -203,13 +203,17 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Content */}
-                        <div className="p-3.5">
-                          <h3 className="text-[14px] font-semibold text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors mb-2">
+                        <div className={isLead ? "p-5" : "p-3.5"}>
+                          <h3 className={`font-semibold text-[var(--color-text)] leading-snug group-hover:text-[var(--color-accent)] transition-colors mb-2 ${
+                            isLead ? "text-lg line-clamp-3" : "text-[14px] line-clamp-2"
+                          }`}>
                             {event.title}
                           </h3>
+                          {isLead && event.summary && (
+                            <p className="text-[13px] text-[var(--color-text-secondary)] line-clamp-2 mb-2 leading-relaxed">{event.summary}</p>
+                          )}
                           <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
-                            <span>{event.leadArticle.sourceName}</span>
+                            <span className="font-medium">{event.leadArticle.sourceName}</span>
                             <span className="opacity-30">|</span>
                             <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {timeAgo(event.latestUpdate)}</span>
                           </div>
@@ -234,10 +238,10 @@ export default function Home() {
                       <button
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className="flex items-start gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2.5 hover:border-[var(--color-accent)]/15 transition-all text-left group"
+                        className="flex items-start gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2.5 hover:border-[var(--color-accent)]/20 hover:shadow-md hover:translate-y-[-1px] transition-all text-left group"
                       >
-                        {/* Thumbnail — always visible */}
-                        <EventImage src={event.imageUrl} category={event.leadArticle.category} title={event.title} className="w-20 h-16 rounded-lg shrink-0" />
+                        {/* Thumbnail */}
+                        <EventImage src={event.imageUrl} category={event.leadArticle.category} title={event.title} className="w-24 h-[68px] rounded-lg shrink-0" />
                         {/* Text */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">

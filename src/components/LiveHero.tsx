@@ -25,7 +25,7 @@ export default function LiveHero({ event, onSelectArticle }: LiveHeroProps) {
     <section
       onClick={() => onSelectArticle(event.leadArticle.id)}
       className="relative w-full rounded-2xl overflow-hidden cursor-pointer group"
-      style={{ minHeight: "clamp(280px, 42vh, 420px)" }}
+      style={{ minHeight: "clamp(340px, 50vh, 500px)" }}
     >
       {/* Background — always a real photo */}
       <img
