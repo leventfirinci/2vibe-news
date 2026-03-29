@@ -1,7 +1,7 @@
 import RSSParser from "rss-parser";
 import { NEWS_SOURCES } from "@/data/sources";
 import { Article, Category, Language, Priority } from "@/lib/types";
-import { classifyCategory, detectPriority } from "@/lib/classifier";
+import { classifyCategory, detectPriority, detectSecondaryCategories, detectImpactAreas } from "@/lib/classifier";
 
 const parser = new RSSParser({
   timeout: 10000,
@@ -78,6 +78,8 @@ export async function fetchFromSource(
 
       const category = classifyCategory(title, snippet, source.defaultCategory);
       const priority = detectPriority(title, snippet, source.language);
+      const secondaryCategories = detectSecondaryCategories(title, snippet, category);
+      const impactAreas = detectImpactAreas(title, snippet);
 
       const article: Article = {
         id: generateId(item.link, title),
@@ -90,6 +92,8 @@ export async function fetchFromSource(
         imageUrl: extractImageUrl(item),
         language: source.language,
         category,
+        secondaryCategories,
+        impactAreas,
         priority,
         summaryShort: snippet.slice(0, 200) || undefined,
         publishedAt: item.pubDate || item.isoDate || new Date().toISOString(),

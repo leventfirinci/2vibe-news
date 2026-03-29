@@ -37,7 +37,10 @@ export function getArticleById(id: string): Article | undefined {
 }
 
 export function getArticlesByCategory(category: Category): Article[] {
-  return articlesCache.filter((a) => a.category === category);
+  return articlesCache.filter(
+    (a) => a.category === category ||
+      (a.secondaryCategories && a.secondaryCategories.includes(category))
+  );
 }
 
 export function getRelatedArticles(article: Article): Article[] {

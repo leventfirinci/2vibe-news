@@ -28,6 +28,8 @@ export interface NewsSource {
   isOfficial: boolean; // government/official source
 }
 
+export type ImpactArea = "economic" | "political" | "social" | "security" | "technological" | "environmental" | "legal" | "humanitarian";
+
 export interface Article {
   id: string;
   sourceId: string;
@@ -39,6 +41,8 @@ export interface Article {
   imageUrl?: string;
   language: Language;
   category: Category;
+  secondaryCategories: Category[]; // Dual-category: impact areas
+  impactAreas: ImpactArea[]; // What domains this news impacts
   priority: Priority;
   summaryShort?: string;
   summaryDetailed?: string;

@@ -1,20 +1,22 @@
-import { Article } from "@/lib/types";
+import { Article, Category, ImpactArea } from "@/lib/types";
 
 export interface NewsEvent {
   id: string;
-  title: string; // Best title (from highest reliability source)
+  title: string;
   summary: string;
   category: string;
+  secondaryCategories: Category[];
+  impactAreas: ImpactArea[];
   priority: "breaking" | "important" | "normal";
-  articles: Article[]; // All articles about this event
+  articles: Article[];
   sourceCount: number;
-  sources: string[]; // Unique source names
+  sources: string[];
   highestReliability: number;
   latestUpdate: string;
   firstSeen: string;
   whyItMatters?: string;
   imageUrl?: string;
-  leadArticle: Article; // The "best" article (highest reliability)
+  leadArticle: Article;
 }
 
 /**
@@ -78,11 +80,21 @@ export function clusterArticlesIntoEvents(articles: Article[]): NewsEvent[] {
 
     const dates = cluster.map((a) => new Date(a.publishedAt).getTime());
 
+    // Merge secondary categories and impact areas from all articles
+    const allSecondary = new Set<Category>();
+    const allImpacts = new Set<ImpactArea>();
+    for (const a of cluster) {
+      if (a.secondaryCategories) a.secondaryCategories.forEach((c) => allSecondary.add(c));
+      if (a.impactAreas) a.impactAreas.forEach((i) => allImpacts.add(i));
+    }
+
     return {
       id: `event-${lead.id}`,
       title: lead.title,
       summary: lead.summaryShort || cluster.find((a) => a.summaryShort)?.summaryShort || "",
       category: lead.category,
+      secondaryCategories: [...allSecondary].slice(0, 3),
+      impactAreas: [...allImpacts].slice(0, 3),
       priority,
       articles: cluster,
       sourceCount: sources.length,

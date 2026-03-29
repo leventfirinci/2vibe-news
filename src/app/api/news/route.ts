@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getArticles,
-  getArticlesByCategory,
   searchArticles,
   getStats,
 } from "@/lib/store";
@@ -22,11 +21,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(getStats());
   }
 
-  let articles = category
-    ? getArticlesByCategory(category)
-    : query
-      ? searchArticles(query)
-      : getArticles();
+  let articles = query ? searchArticles(query) : getArticles();
+
+  // Dual-category filter: match primary OR secondary categories
+  if (category) {
+    articles = articles.filter(
+      (a) =>
+        a.category === category ||
+        (a.secondaryCategories && a.secondaryCategories.includes(category))
+    );
+  }
 
   // Filter by language
   if (language) {

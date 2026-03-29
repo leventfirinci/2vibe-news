@@ -1,4 +1,4 @@
-import { Category, Language, Priority } from "@/lib/types";
+import { Category, Language, Priority, ImpactArea } from "@/lib/types";
 
 // "breaking" is NOT a content category — it's a priority level.
 // Categories describe TOPIC. Priority describes URGENCY.
@@ -262,4 +262,100 @@ export function detectPriority(
   }
 
   return "normal";
+}
+
+/**
+ * Detect secondary categories — what other topics does this news touch?
+ * Example: "Israel strikes Iran oil facility" → primary: world, secondary: [economy]
+ */
+export function detectSecondaryCategories(
+  title: string,
+  snippet: string,
+  primaryCategory: Category
+): Category[] {
+  const text = `${title} ${snippet}`.toLowerCase();
+  const secondary: Category[] = [];
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (category === primaryCategory) continue;
+    if (category === "breaking") continue;
+
+    let score = 0;
+    const allKeywords = [...keywords.tr, ...keywords.en];
+    for (const kw of allKeywords) {
+      if (text.includes(kw.toLowerCase())) score++;
+    }
+
+    // Lower threshold for secondary (1 match is enough)
+    if (score >= 1) {
+      secondary.push(category as Category);
+    }
+  }
+
+  return secondary.slice(0, 3); // Max 3 secondary categories
+}
+
+/**
+ * Detect impact areas — what domains does this news affect?
+ */
+const IMPACT_KEYWORDS: Record<ImpactArea, string[]> = {
+  economic: [
+    "economy", "ekonomi", "market", "piyasa", "dolar", "euro", "trade",
+    "tariff", "inflation", "enflasyon", "oil", "petrol", "price", "fiyat",
+    "stock", "borsa", "gdp", "recession", "supply chain", "export", "import",
+    "sanctions", "yaptirim", "bank", "banka", "interest", "faiz",
+  ],
+  political: [
+    "election", "secim", "government", "hukumet", "parliament", "meclis",
+    "president", "cumhurbaskani", "policy", "legislation", "kanun",
+    "diplomacy", "diplomasi", "summit", "zirve", "treaty",
+  ],
+  social: [
+    "protest", "protesto", "community", "toplum", "education", "egitim",
+    "inequality", "poverty", "unemployment", "issizlik", "migration", "goc",
+    "refugee", "multeci", "housing", "konut", "public health",
+  ],
+  security: [
+    "military", "askeri", "war", "savas", "terrorism", "teror",
+    "defense", "savunma", "attack", "saldiri", "missile", "fuze",
+    "nato", "intelligence", "istihbarat", "cybersecurity", "border", "sinir",
+  ],
+  technological: [
+    "ai", "yapay zeka", "software", "yazilim", "cyber", "siber",
+    "data", "veri", "digital", "dijital", "innovation", "inovasyon",
+    "automation", "otomasyon", "semiconductor", "chip",
+  ],
+  environmental: [
+    "climate", "iklim", "pollution", "kirlilik", "earthquake", "deprem",
+    "flood", "sel", "fire", "yangin", "disaster", "afet", "carbon",
+    "environment", "cevre", "tsunami", "drought", "kuraklik",
+  ],
+  legal: [
+    "court", "mahkeme", "law", "kanun", "lawsuit", "dava", "regulation",
+    "yonetmelik", "verdict", "karar", "judge", "hakim", "constitution",
+    "anayasa", "arrest", "tutuklama", "prison", "cezaevi",
+  ],
+  humanitarian: [
+    "civilian", "sivil", "aid", "yardim", "humanitarian", "insani",
+    "victims", "kurban", "killed", "oldu", "death toll", "casualties",
+    "hospital", "hastane", "children", "cocuk", "women", "kadin",
+  ],
+};
+
+export function detectImpactAreas(title: string, snippet: string): ImpactArea[] {
+  const text = `${title} ${snippet}`.toLowerCase();
+  const impacts: { area: ImpactArea; score: number }[] = [];
+
+  for (const [area, keywords] of Object.entries(IMPACT_KEYWORDS)) {
+    let score = 0;
+    for (const kw of keywords) {
+      if (text.includes(kw)) score++;
+    }
+    if (score >= 2) { // Need 2+ matches for impact area
+      impacts.push({ area: area as ImpactArea, score });
+    }
+  }
+
+  impacts.sort((a, b) => b.score - a.score);
+  return impacts.slice(0, 3).map((i) => i.area);
 }

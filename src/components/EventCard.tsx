@@ -3,6 +3,7 @@
 import { NewsEvent } from "@/lib/event-cluster";
 import { CATEGORIES } from "@/data/sources";
 import ReliabilityBadge from "./ReliabilityBadge";
+import ImpactBadges from "./ImpactBadges";
 import { Clock, Users, Lightbulb, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -76,6 +77,13 @@ export default function EventCard({ event, onSelect }: EventCardProps) {
         <h3 className="text-[15px] font-semibold text-[var(--color-text)] leading-snug mb-1.5 group-hover:text-[var(--color-accent)] transition-colors line-clamp-2">
           {event.title}
         </h3>
+
+        {/* Impact badges */}
+        {(event.impactAreas?.length > 0 || event.secondaryCategories?.length > 0) && (
+          <div className="mb-1.5">
+            <ImpactBadges impactAreas={event.impactAreas || []} secondaryCategories={event.secondaryCategories || []} />
+          </div>
+        )}
 
         {/* Summary */}
         {event.summary && (
