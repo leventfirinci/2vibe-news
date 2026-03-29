@@ -178,7 +178,7 @@ export default function Home() {
                       >
                         {/* Image — always visible */}
                         <div className="relative h-44 overflow-hidden">
-                          <EventImage src={event.imageUrl} category={event.category} categoryColor={cat?.color} categoryIcon={cat?.icon} className="w-full h-full transition-transform duration-500 group-hover:scale-[1.04]" />
+                          <EventImage src={event.imageUrl} category={event.category} title={event.title} className="w-full h-full transition-transform duration-500 group-hover:scale-[1.04]" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
                           {/* Category pill on image */}
@@ -237,7 +237,7 @@ export default function Home() {
                         className="flex items-start gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2.5 hover:border-[var(--color-accent)]/15 transition-all text-left group"
                       >
                         {/* Thumbnail — always visible */}
-                        <EventImage src={event.imageUrl} category={event.leadArticle.category} categoryColor={cat?.color} categoryIcon={cat?.icon} className="w-20 h-16 rounded-lg shrink-0" />
+                        <EventImage src={event.imageUrl} category={event.leadArticle.category} title={event.title} className="w-20 h-16 rounded-lg shrink-0" />
                         {/* Text */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">
