@@ -4,7 +4,7 @@ import { NewsEvent } from "@/lib/event-cluster";
 import { CATEGORIES } from "@/data/sources";
 import ReliabilityBadge from "./ReliabilityBadge";
 // ImpactBadges removed — will re-enable when classification is accurate
-import { X, Clock, Radio, Users, Lightbulb, ArrowRight, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Clock, Radio, Users, Lightbulb, ArrowRight, ExternalLink, ChevronDown, ChevronUp, TrendingUp, Globe } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useState } from "react";
@@ -130,6 +130,54 @@ export default function EventDetail({ event, onClose }: EventDetailProps) {
               </p>
             </div>
           )}
+
+          {/* === ATTENTION LEVEL === */}
+          {event.sourceCount >= 2 && (
+            <div className="flex items-center gap-3 py-3 px-4 bg-[var(--color-bg)] rounded-xl transition-colors">
+              <TrendingUp className="w-4 h-4 text-[var(--color-accent)] shrink-0" />
+              <div className="flex-1">
+                <span className="text-xs font-semibold text-[var(--color-text)]">
+                  {event.sourceCount >= 4 ? "Gundemde Yukseliyor" : event.sourceCount >= 3 ? "Yakin Takipte" : "Coklu Kaynak"}
+                </span>
+                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                  {event.sourceCount} farkli kaynak tarafindan haberlestirildi
+                  {(() => {
+                    const langs = new Set(event.articles.map((a) => a.language));
+                    if (langs.size > 1) return " · Turkce ve Ingilizce kaynaklarda";
+                    return "";
+                  })()}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* === COUNTRIES / SOURCES DIVERSITY === */}
+          {(() => {
+            const countries = new Set(event.articles.map((a) => {
+              // Extract country from source data
+              if (["bbc-turkce", "t24", "diken", "bianet", "ntv", "hurriyet", "sozcu", "cumhuriyet", "haberturk", "bloomberght", "aa", "trthaber", "dunya", "fanatik", "webtekno", "donanimhaber"].includes(a.sourceId)) return "TR";
+              if (["bbc-world", "bbc-tech", "bbc-sport", "bbc-science", "bbc-health", "bbc-business", "guardian"].includes(a.sourceId)) return "GB";
+              if (["ap-news", "cnn", "techcrunch", "theverge", "arstechnica", "espn", "npr"].includes(a.sourceId)) return "US";
+              if (a.sourceId === "aljazeera") return "QA";
+              if (a.sourceId === "reuters") return "GB";
+              return "INT";
+            }));
+            const countryNames: Record<string, string> = { TR: "Turkiye", GB: "Birlesik Krallik", US: "ABD", QA: "Katar", INT: "Uluslararasi" };
+            const countryList = [...countries].map((c) => countryNames[c] || c);
+
+            if (countryList.length <= 1) return null;
+            return (
+              <div className="flex items-center gap-3 py-3 px-4 bg-[var(--color-bg)] rounded-xl transition-colors">
+                <Globe className="w-4 h-4 text-[var(--color-blue)] shrink-0" />
+                <div>
+                  <span className="text-xs font-semibold text-[var(--color-text)]">Uluslararasi Kapsam</span>
+                  <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                    {countryList.join(", ")} kaynaklarinda yer aldi
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* === SOURCE RELIABILITY COMPARISON === */}
           {event.articles.length > 1 && (

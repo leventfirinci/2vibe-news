@@ -4,15 +4,16 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Header from "@/components/Header";
 import CategoryBar from "@/components/CategoryBar";
 import LiveHero from "@/components/LiveHero";
-import TrendingEvents from "@/components/TrendingEvents";
+// TrendingEvents replaced by inline Breaking News + Most Discussed sections
 import EventCard from "@/components/EventCard";
 import CompactCard from "@/components/CompactCard";
 import SectionLabel from "@/components/SectionLabel";
 import EventDetail from "@/components/EventDetail";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { Article, Category } from "@/lib/types";
+import { CATEGORIES } from "@/data/sources";
 import { clusterArticlesIntoEvents, NewsEvent } from "@/lib/event-cluster";
-import { Newspaper, RefreshCw, Zap, List } from "lucide-react";
+import { Newspaper, RefreshCw, Zap, List, Radio, MessageCircle } from "lucide-react";
 
 interface NewsResponse {
   articles: Article[];
@@ -107,21 +108,32 @@ export default function Home() {
   const allEvents = useMemo(() => clusterArticlesIntoEvents(allArticles), [allArticles]);
 
   // Split events by priority
-  const { heroEvent, trendingEvents, importantEvents, normalEvents } = useMemo(() => {
+  const { heroEvent, breakingEvents, mostDiscussedEvents, importantEvents, normalEvents } = useMemo(() => {
     const breaking = events.filter((e) => e.priority === "breaking");
     const important = events.filter((e) => e.priority === "important");
     const normal = events.filter((e) => e.priority === "normal");
 
     const hero = breaking.sort((a, b) => b.sourceCount - a.sourceCount)[0] || null;
 
-    const trending = allEvents
+    // Breaking news = all breaking events except hero (urgent, separate from feed)
+    const breakingNews = breaking.filter((e) => e.id !== hero?.id).slice(0, 4);
+
+    // Most discussed = events with highest source count across ALL events
+    const mostDiscussed = allEvents
       .filter((e) => e.id !== hero?.id && e.sourceCount >= 2)
       .sort((a, b) => b.sourceCount - a.sourceCount)
       .slice(0, 6);
 
-    const imp = [...breaking.filter((e) => e.id !== hero?.id), ...important].slice(0, 8);
+    // Important stories
+    const imp = [...important].slice(0, 8);
 
-    return { heroEvent: hero, trendingEvents: trending, importantEvents: imp, normalEvents: normal };
+    return {
+      heroEvent: hero,
+      breakingEvents: breakingNews,
+      mostDiscussedEvents: mostDiscussed,
+      importantEvents: imp,
+      normalEvents: normal,
+    };
   }, [events, allEvents]);
 
   // Find event containing an article (for hero click → event detail)
@@ -224,14 +236,82 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-8 fade-in">
+
+            {/* === 1. LIVE HERO === */}
             {heroEvent && (
               <LiveHero event={heroEvent} onSelectArticle={handleHeroClick} />
             )}
 
-            {trendingEvents.length > 0 && (
-              <TrendingEvents events={trendingEvents} onSelectEvent={handleSelectEvent} />
+            {/* === 2. BREAKING NEWS (separate urgent section) === */}
+            {breakingEvents.length > 0 && (
+              <section>
+                <SectionLabel title="Son Dakika" icon={<Radio className="w-3.5 h-3.5" />} count={breakingEvents.length} className="text-[var(--color-red)]" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {breakingEvents.map((event) => {
+                    const cat = CATEGORIES.find((c) => c.id === event.category);
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => handleSelectEvent(event)}
+                        className="text-left bg-[var(--color-red-bg)] border border-[var(--color-red)]/10 rounded-xl p-3 hover:border-[var(--color-red)]/30 transition-all group"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-red)] live-pulse" />
+                          <span className="text-[10px] font-bold text-[var(--color-red)] uppercase tracking-wider">Canli</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)]">{cat?.labelTr}</span>
+                        </div>
+                        <p className="text-[13px] font-semibold text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-red)] transition-colors">
+                          {event.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 text-[10px] text-[var(--color-text-muted)]">
+                          <span>{event.leadArticle.sourceName}</span>
+                          {event.sourceCount > 1 && (
+                            <span className="text-[var(--color-red)] font-semibold">{event.sourceCount} kaynak</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             )}
 
+            {/* === 3. MOST DISCUSSED === */}
+            {mostDiscussedEvents.length > 0 && (
+              <section>
+                <SectionLabel title="En Cok Konusulan" icon={<MessageCircle className="w-3.5 h-3.5" />} count={mostDiscussedEvents.length} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {mostDiscussedEvents.map((event, i) => {
+                    const cat = CATEGORIES.find((c) => c.id === event.category);
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => handleSelectEvent(event)}
+                        className="text-left bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-3.5 hover:border-[var(--color-accent)]/20 transition-all group relative overflow-hidden"
+                      >
+                        <div className="absolute top-2.5 right-3 text-[28px] font-black text-[var(--color-border)] select-none leading-none">
+                          {i + 1}
+                        </div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat?.color }} />
+                          <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{cat?.labelTr}</span>
+                          <span className="flex items-center gap-0.5 text-[10px] text-[var(--color-accent)] font-bold ml-auto mr-6">
+                            <MessageCircle className="w-2.5 h-2.5" />
+                            {event.sourceCount} kaynak
+                          </span>
+                        </div>
+                        <p className="text-[13px] font-semibold text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors pr-4">
+                          {event.title}
+                        </p>
+                        <span className="text-[10px] text-[var(--color-text-muted)] mt-1.5 block">{event.leadArticle.sourceName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* === 4. IMPORTANT EVENTS === */}
             {importantEvents.length > 0 && (
               <section>
                 <SectionLabel title="Onemli Gelismeler" icon={<Zap className="w-3.5 h-3.5" />} count={importantEvents.length} />
@@ -243,6 +323,7 @@ export default function Home() {
               </section>
             )}
 
+            {/* === 5. LATEST EVENTS === */}
             {normalEvents.length > 0 && (
               <section>
                 <SectionLabel title="Son Gelismeler" icon={<List className="w-3.5 h-3.5" />} count={normalEvents.length} />
