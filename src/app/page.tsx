@@ -9,6 +9,7 @@ import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { Article, Category } from "@/lib/types";
 import { CATEGORIES } from "@/data/sources";
 import { clusterArticlesIntoEvents, NewsEvent } from "@/lib/event-cluster";
+import EventImage from "@/components/EventImage";
 import { Newspaper, RefreshCw, Clock, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -175,13 +176,9 @@ export default function Home() {
                         onClick={() => setSelectedEvent(event)}
                         className="text-left rounded-2xl overflow-hidden border border-[var(--color-border)] hover:border-[var(--color-accent)]/20 hover:shadow-lg transition-all group bg-[var(--color-bg-card)]"
                       >
-                        {/* Image */}
-                        <div className="relative h-40 overflow-hidden bg-[var(--color-bg-secondary)]">
-                          {event.imageUrl ? (
-                            <img src={event.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                          ) : (
-                            <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${cat?.color}18 0%, ${cat?.color}06 100%)` }} />
-                          )}
+                        {/* Image — always visible */}
+                        <div className="relative h-44 overflow-hidden">
+                          <EventImage src={event.imageUrl} category={event.category} categoryColor={cat?.color} categoryIcon={cat?.icon} className="w-full h-full transition-transform duration-500 group-hover:scale-[1.04]" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
                           {/* Category pill on image */}
@@ -239,16 +236,8 @@ export default function Home() {
                         onClick={() => setSelectedEvent(event)}
                         className="flex items-start gap-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2.5 hover:border-[var(--color-accent)]/15 transition-all text-left group"
                       >
-                        {/* Thumbnail */}
-                        <div className="w-20 h-16 rounded-lg overflow-hidden shrink-0 bg-[var(--color-bg-secondary)]">
-                          {event.imageUrl ? (
-                            <img src={event.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${cat?.color}18 0%, ${cat?.color}06 100%)` }}>
-                              <span className="text-[14px] opacity-30">{cat?.icon}</span>
-                            </div>
-                          )}
-                        </div>
+                        {/* Thumbnail — always visible */}
+                        <EventImage src={event.imageUrl} category={event.leadArticle.category} categoryColor={cat?.color} categoryIcon={cat?.icon} className="w-20 h-16 rounded-lg shrink-0" />
                         {/* Text */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">

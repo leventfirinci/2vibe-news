@@ -27,17 +27,20 @@ export default function LiveHero({ event, onSelectArticle }: LiveHeroProps) {
       className="relative w-full rounded-2xl overflow-hidden cursor-pointer group"
       style={{ minHeight: "clamp(280px, 42vh, 420px)" }}
     >
-      {/* Background */}
-      {event.imageUrl ? (
+      {/* Background — always has visual */}
+      {event.imageUrl && (
         <img
           src={event.imageUrl}
           alt=""
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1a0505] via-[#2d0a0a] to-[#0a0a0a]" />
       )}
+      <div className="absolute inset-0" style={{
+        background: event.imageUrl
+          ? undefined
+          : `linear-gradient(135deg, ${category?.color || '#dc2626'}30 0%, #0a0a0a 60%, ${category?.color || '#dc2626'}10 100%)`
+      }} />
 
       {/* Overlay */}
       <div className="absolute inset-0 gradient-overlay" />
