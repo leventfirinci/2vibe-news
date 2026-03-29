@@ -24,6 +24,29 @@
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/01-hero-dark.png" alt="Live Hero — Breaking news with source confirmation" /></td>
+    <td><img src="docs/screenshots/02-events-dark.png" alt="Event Cards — Important stories with images" /></td>
+  </tr>
+  <tr>
+    <td><em>Live Hero — Breaking event with "2 sources confirmed"</em></td>
+    <td><em>Important Events — Categorized cards with reliability scores</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/03-latest-dark.png" alt="Latest Feed — Compact news list" /></td>
+    <td><img src="docs/screenshots/04-detail-dark.png" alt="Article Detail — Source comparison bars" /></td>
+  </tr>
+  <tr>
+    <td><em>Latest Feed — Dense, scannable event list</em></td>
+    <td><em>Detail Panel — Multi-source reliability comparison</em></td>
+  </tr>
+</table>
+
+---
+
 ## The Problem
 
 People consume news from single sources, trapped in filter bubbles. They can't easily verify what's real, compare perspectives, or understand why a story matters. Existing news apps optimize for engagement, not understanding.
