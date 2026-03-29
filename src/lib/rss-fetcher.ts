@@ -4,9 +4,9 @@ import { Article, Category, Language, Priority } from "@/lib/types";
 import { classifyCategory, detectPriority, detectSecondaryCategories, detectImpactAreas } from "@/lib/classifier";
 
 const parser = new RSSParser({
-  timeout: 10000,
+  timeout: 5000, // 5s timeout per source (Vercel-safe)
   headers: {
-    "User-Agent": "2VibeNews/1.0 (news aggregator; contact@2vibenews.com)",
+    "User-Agent": "2VibeNews/1.0 (news aggregator)",
   },
 });
 
@@ -108,6 +108,23 @@ export async function fetchFromSource(
     console.error(`[RSS] Failed to fetch ${source.name}:`, error);
     return [];
   }
+}
+
+// Fetch sources in batches to avoid Vercel timeout (max 10s on Hobby)
+async function fetchInBatches(sources: typeof NEWS_SOURCES, batchSize = 8): Promise<Article[]> {
+  const allArticles: Article[] = [];
+  for (let i = 0; i < sources.length; i += batchSize) {
+    const batch = sources.slice(i, i + batchSize);
+    const results = await Promise.allSettled(
+      batch.map((source) => fetchFromSource(source))
+    );
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        allArticles.push(...result.value);
+      }
+    }
+  }
+  return allArticles;
 }
 
 export async function fetchAllSources(): Promise<Article[]> {
