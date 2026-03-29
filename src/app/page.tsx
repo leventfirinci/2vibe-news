@@ -8,7 +8,7 @@ import TrendingEvents from "@/components/TrendingEvents";
 import EventCard from "@/components/EventCard";
 import CompactCard from "@/components/CompactCard";
 import SectionLabel from "@/components/SectionLabel";
-import ArticleDetail from "@/components/ArticleDetail";
+import EventDetail from "@/components/EventDetail";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { Article, Category } from "@/lib/types";
 import { clusterArticlesIntoEvents, NewsEvent } from "@/lib/event-cluster";
@@ -31,7 +31,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [language, setLanguage] = useState<"all" | "tr" | "en">("all");
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<NewsEvent | null>(null);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [darkMode, setDarkMode] = useState(false);
 
@@ -112,48 +112,64 @@ export default function Home() {
     const important = events.filter((e) => e.priority === "important");
     const normal = events.filter((e) => e.priority === "normal");
 
-    // Hero = top breaking event (most sources)
     const hero = breaking.sort((a, b) => b.sourceCount - a.sourceCount)[0] || null;
 
-    // Trending = top events by source count (multi-source events), excluding hero
     const trending = allEvents
       .filter((e) => e.id !== hero?.id && e.sourceCount >= 2)
       .sort((a, b) => b.sourceCount - a.sourceCount)
       .slice(0, 6);
 
-    // Important = remaining breaking + important events
     const imp = [...breaking.filter((e) => e.id !== hero?.id), ...important].slice(0, 8);
 
-    return {
-      heroEvent: hero,
-      trendingEvents: trending,
-      importantEvents: imp,
-      normalEvents: normal,
-    };
+    return { heroEvent: hero, trendingEvents: trending, importantEvents: imp, normalEvents: normal };
   }, [events, allEvents]);
 
-  // Find article by ID for detail view
-  const findArticle = useCallback((id: string) =>
-    articles.find((a) => a.id === id) || allArticles.find((a) => a.id === id),
-    [articles, allArticles]
-  );
+  // Find event containing an article (for hero click → event detail)
+  const findEventForArticle = useCallback((articleId: string): NewsEvent | null => {
+    return events.find((e) => e.articles.some((a) => a.id === articleId))
+      || allEvents.find((e) => e.articles.some((a) => a.id === articleId))
+      || null;
+  }, [events, allEvents]);
 
-  const handleSelectArticle = useCallback((id: string) => {
-    const article = findArticle(id);
-    if (article) setSelectedArticle(article);
-  }, [findArticle]);
+  // Hero click → find the event and open EventDetail
+  const handleHeroClick = useCallback((articleId: string) => {
+    const event = findEventForArticle(articleId);
+    if (event) setSelectedEvent(event);
+    else if (heroEvent) setSelectedEvent(heroEvent);
+  }, [findEventForArticle, heroEvent]);
 
+  // Event card / trending click → open EventDetail
   const handleSelectEvent = useCallback((event: NewsEvent) => {
-    setSelectedArticle(event.leadArticle);
+    setSelectedEvent(event);
   }, []);
 
-  const getRelated = useCallback((a: Article) =>
-    articles
-      .filter((x) => x.id !== a.id && x.category === a.category &&
-        Math.abs(new Date(x.publishedAt).getTime() - new Date(a.publishedAt).getTime()) < 86400000)
-      .slice(0, 8),
-    [articles]
-  );
+  // Compact card click → wrap single article in a minimal event
+  const handleCompactClick = useCallback((article: Article) => {
+    const event = findEventForArticle(article.id);
+    if (event) {
+      setSelectedEvent(event);
+    } else {
+      // Wrap single article as a 1-source event
+      setSelectedEvent({
+        id: `event-${article.id}`,
+        title: article.title,
+        summary: article.summaryShort || "",
+        category: article.category,
+        secondaryCategories: article.secondaryCategories || [],
+        impactAreas: article.impactAreas || [],
+        priority: article.priority,
+        articles: [article],
+        sourceCount: 1,
+        sources: [article.sourceName],
+        highestReliability: article.sourceReliability,
+        latestUpdate: article.publishedAt,
+        firstSeen: article.publishedAt,
+        whyItMatters: article.whyItMatters,
+        imageUrl: article.imageUrl,
+        leadArticle: article,
+      });
+    }
+  }, [findEventForArticle]);
 
   if (loading) {
     return (
@@ -180,7 +196,6 @@ export default function Home() {
       <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} counts={categoryCounts} />
 
       <main className="max-w-6xl mx-auto px-4 pt-5 pb-12">
-        {/* Update indicator */}
         {fetching && (
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] mb-3">
             <RefreshCw className="w-3 h-3 animate-spin" />
@@ -188,7 +203,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="text-center py-16">
             <p className="text-sm text-[var(--color-red)] mb-3">{error}</p>
@@ -202,7 +216,7 @@ export default function Home() {
           <div className="flex flex-col items-center py-24 text-center fade-in">
             <Newspaper className="w-10 h-10 text-[var(--color-text-muted)] mb-3" />
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              {searchQuery ? `"${searchQuery}" icin sonuc bulunamadi.` : "Kaynaklar taranıyor..."}
+              {searchQuery ? `"${searchQuery}" icin sonuc bulunamadi.` : "Kaynaklar taraniyor..."}
             </p>
             <button onClick={triggerFetch} className="px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-accent-hover)] transition-colors">
               Haberleri Yukle
@@ -210,18 +224,14 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-8 fade-in">
-
-            {/* === 1. LIVE HERO === */}
             {heroEvent && (
-              <LiveHero event={heroEvent} onSelectArticle={handleSelectArticle} />
+              <LiveHero event={heroEvent} onSelectArticle={handleHeroClick} />
             )}
 
-            {/* === 2. TRENDING NOW === */}
             {trendingEvents.length > 0 && (
               <TrendingEvents events={trendingEvents} onSelectEvent={handleSelectEvent} />
             )}
 
-            {/* === 3. IMPORTANT EVENTS === */}
             {importantEvents.length > 0 && (
               <section>
                 <SectionLabel title="Onemli Gelismeler" icon={<Zap className="w-3.5 h-3.5" />} count={importantEvents.length} />
@@ -233,7 +243,6 @@ export default function Home() {
               </section>
             )}
 
-            {/* === 4. LATEST EVENTS === */}
             {normalEvents.length > 0 && (
               <section>
                 <SectionLabel title="Son Gelismeler" icon={<List className="w-3.5 h-3.5" />} count={normalEvents.length} />
@@ -242,7 +251,7 @@ export default function Home() {
                     <CompactCard
                       key={event.id}
                       article={event.leadArticle}
-                      onSelect={setSelectedArticle}
+                      onSelect={handleCompactClick}
                       sourceCount={event.sourceCount}
                     />
                   ))}
@@ -253,13 +262,11 @@ export default function Home() {
         )}
       </main>
 
-      {/* Detail panel */}
-      {selectedArticle && (
-        <ArticleDetail
-          article={selectedArticle}
-          relatedArticles={getRelated(selectedArticle)}
-          onClose={() => setSelectedArticle(null)}
-          onSelectRelated={setSelectedArticle}
+      {/* EVENT DETAIL PANEL */}
+      {selectedEvent && (
+        <EventDetail
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
         />
       )}
 
