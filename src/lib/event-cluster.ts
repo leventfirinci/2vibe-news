@@ -80,21 +80,18 @@ export function clusterArticlesIntoEvents(articles: Article[]): NewsEvent[] {
 
     const dates = cluster.map((a) => new Date(a.publishedAt).getTime());
 
-    // Merge secondary categories and impact areas from all articles
-    const allSecondary = new Set<Category>();
-    const allImpacts = new Set<ImpactArea>();
-    for (const a of cluster) {
-      if (a.secondaryCategories) a.secondaryCategories.forEach((c) => allSecondary.add(c));
-      if (a.impactAreas) a.impactAreas.forEach((i) => allImpacts.add(i));
-    }
+    // Only use LEAD article's secondary/impact (don't merge — merging caused wrong badges)
+    // Lead article has highest reliability → most trustworthy classification
+    const leadSecondary = lead.secondaryCategories || [];
+    const leadImpacts = lead.impactAreas || [];
 
     return {
       id: `event-${lead.id}`,
       title: lead.title,
       summary: lead.summaryShort || cluster.find((a) => a.summaryShort)?.summaryShort || "",
       category: lead.category,
-      secondaryCategories: [...allSecondary].slice(0, 3),
-      impactAreas: [...allImpacts].slice(0, 3),
+      secondaryCategories: leadSecondary.slice(0, 1),
+      impactAreas: leadImpacts.slice(0, 2),
       priority,
       articles: cluster,
       sourceCount: sources.length,

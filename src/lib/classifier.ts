@@ -272,13 +272,10 @@ export function detectPriority(
 }
 
 /**
- * Detect secondary categories — what other topics does this news touch?
- * Example: "Israel strikes Iran oil facility" → primary: world, secondary: [economy]
- *
- * STRICT RULES:
- * - Minimum 3 keyword matches (was 1 — caused murder→economy bugs)
- * - Violence context blocks economy/tech/sports/science/health/culture
- * - Only genuinely strong cross-topic matches qualify
+ * Detect secondary categories.
+ * RULE: Violence/crime/disaster → NO secondary categories at all.
+ * RULE: Economy only if 5+ strong financial keyword matches.
+ * RULE: Accuracy > quantity. Return empty array if unsure.
  */
 export function detectSecondaryCategories(
   title: string,
@@ -286,17 +283,16 @@ export function detectSecondaryCategories(
   primaryCategory: Category
 ): Category[] {
   const text = `${title} ${snippet}`.toLowerCase();
+
+  // HARD RULE: Violence/crime/disaster/death → ZERO secondary categories
   const hasViolence = VIOLENCE_CONTEXT.some((w) => text.includes(w.toLowerCase()));
+  if (hasViolence) return [];
+
   const secondary: Category[] = [];
 
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     if (category === primaryCategory) continue;
     if (category === "breaking") continue;
-
-    // If violence detected, block soft categories from being secondary too
-    if (hasViolence && VIOLENCE_BLOCKED_CATEGORIES.includes(category as Category)) {
-      continue; // Skip — murder/terror/earthquake should NEVER show economy/tech
-    }
 
     let score = 0;
     const allKeywords = [...keywords.tr, ...keywords.en];
@@ -304,13 +300,15 @@ export function detectSecondaryCategories(
       if (text.includes(kw.toLowerCase())) score++;
     }
 
-    // STRICT threshold: need 3+ matches (was 1, caused false positives)
-    if (score >= 3) {
-      secondary.push(category as Category);
-    }
+    // Economy needs 5+ matches (very strict — only truly financial news)
+    if (category === "economy" && score < 5) continue;
+    // All others need 4+ matches
+    if (category !== "economy" && score < 4) continue;
+
+    secondary.push(category as Category);
   }
 
-  return secondary.slice(0, 2); // Max 2 (less noise)
+  return secondary.slice(0, 1); // Max 1 secondary (less noise, more trust)
 }
 
 /**
@@ -360,20 +358,34 @@ const IMPACT_KEYWORDS: Record<ImpactArea, string[]> = {
   ],
 };
 
+/**
+ * Detect impact areas.
+ * RULE: Violence/crime/disaster → only security + humanitarian allowed.
+ * RULE: No "economic" impact for murder/earthquake/terror.
+ * RULE: Threshold 3+ (was 2).
+ * RULE: Max 2 impact areas.
+ */
 export function detectImpactAreas(title: string, snippet: string): ImpactArea[] {
   const text = `${title} ${snippet}`.toLowerCase();
+  const hasViolence = VIOLENCE_CONTEXT.some((w) => text.includes(w.toLowerCase()));
   const impacts: { area: ImpactArea; score: number }[] = [];
 
+  // Impact areas that are BLOCKED during violence/crime/disaster
+  const violenceBlockedImpacts: ImpactArea[] = ["economic", "technological", "environmental"];
+
   for (const [area, keywords] of Object.entries(IMPACT_KEYWORDS)) {
+    // Block irrelevant impacts during violence
+    if (hasViolence && violenceBlockedImpacts.includes(area as ImpactArea)) continue;
+
     let score = 0;
     for (const kw of keywords) {
       if (text.includes(kw)) score++;
     }
-    if (score >= 2) { // Need 2+ matches for impact area
+    if (score >= 3) { // Raised from 2 to 3
       impacts.push({ area: area as ImpactArea, score });
     }
   }
 
   impacts.sort((a, b) => b.score - a.score);
-  return impacts.slice(0, 3).map((i) => i.area);
+  return impacts.slice(0, 2).map((i) => i.area);
 }
