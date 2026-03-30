@@ -204,16 +204,35 @@ export default function Home() {
                         </div>
 
                         <div className={isLead ? "p-5" : "p-3.5"}>
-                          <h3 className={`font-semibold text-[var(--color-text)] leading-snug group-hover:text-[var(--color-accent)] transition-colors mb-2 ${
-                            isLead ? "text-lg line-clamp-3" : "text-[14px] line-clamp-2"
+                          <h3 className={`font-semibold text-[var(--color-text)] leading-snug group-hover:text-[var(--color-accent)] transition-colors ${
+                            isLead ? "text-lg line-clamp-3 mb-2" : "text-[14px] line-clamp-2 mb-1.5"
                           }`}>
                             {event.title}
                           </h3>
-                          {isLead && event.summary && (
-                            <p className="text-[13px] text-[var(--color-text-secondary)] line-clamp-2 mb-2 leading-relaxed">{event.summary}</p>
+
+                          {/* Summary — on all cards, not just lead */}
+                          {event.summary && (
+                            <p className={`text-[var(--color-text-secondary)] leading-relaxed mb-2 ${
+                              isLead ? "text-[13px] line-clamp-2" : "text-[11px] line-clamp-1"
+                            }`}>{event.summary}</p>
                           )}
+
+                          {/* Why It Matters — on lead + any card that has it */}
+                          {isLead && event.whyItMatters && (
+                            <div className="flex items-start gap-1.5 bg-[var(--color-accent-light)] rounded-lg px-2.5 py-1.5 mb-2">
+                              <span className="text-[var(--color-accent)] text-[10px] mt-px">💡</span>
+                              <p className="text-[11px] text-[var(--color-accent)] leading-snug line-clamp-2">{event.whyItMatters}</p>
+                            </div>
+                          )}
+
+                          {/* Footer: source + global indicator + time */}
                           <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
                             <span className="font-medium">{event.leadArticle.sourceName}</span>
+                            {(() => {
+                              const langs = new Set(event.articles.map((a) => a.language));
+                              if (langs.size > 1) return <span className="text-[var(--color-blue)] font-semibold">🌐 TR+EN</span>;
+                              return null;
+                            })()}
                             <span className="opacity-30">|</span>
                             <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {timeAgo(event.latestUpdate)}</span>
                           </div>
@@ -247,10 +266,14 @@ export default function Home() {
                           <div className="flex items-center gap-1.5 mb-0.5">
                             <span className="w-1 h-1 rounded-full" style={{ backgroundColor: cat?.color }} />
                             <span className="text-[9px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{cat?.labelTr}</span>
+                            <span className="text-[9px] text-[var(--color-text-muted)] ml-auto flex items-center gap-0.5"><Clock className="w-2 h-2" />{timeAgo(event.latestUpdate)}</span>
                           </div>
                           <p className="text-[12px] font-medium text-[var(--color-text)] leading-snug line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors">
                             {event.title}
                           </p>
+                          {event.summary && (
+                            <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-1 mt-0.5">{event.summary}</p>
+                          )}
                           <div className="flex items-center gap-1.5 mt-1 text-[9px] text-[var(--color-text-muted)]">
                             <span>{event.leadArticle.sourceName}</span>
                             {event.sourceCount > 1 && <span className="text-[var(--color-accent)] font-semibold">{event.sourceCount} kaynak</span>}

@@ -118,6 +118,33 @@ export default function EventDetail({ event, onClose }: EventDetailProps) {
             </div>
           )}
 
+          {/* === STORY CONTEXT — structured understanding === */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 transition-colors">
+              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">Kategori</span>
+              <span className="text-sm font-semibold text-[var(--color-text)]" style={{ color: category?.color }}>{category?.labelTr}</span>
+            </div>
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 transition-colors">
+              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">Kaynaklar</span>
+              <span className="text-sm font-semibold text-[var(--color-text)]">{event.sourceCount} farkli kaynak</span>
+            </div>
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 transition-colors">
+              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">Guvenilirlik</span>
+              <span className="text-sm font-semibold" style={{ color: event.highestReliability >= 80 ? "var(--color-green)" : event.highestReliability >= 60 ? "var(--color-yellow)" : "var(--color-red)" }}>
+                {event.highestReliability >= 80 ? "Yuksek" : event.highestReliability >= 60 ? "Orta" : "Dusuk"} ({event.highestReliability})
+              </span>
+            </div>
+            <div className="bg-[var(--color-bg)] rounded-xl p-3 transition-colors">
+              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">Dil</span>
+              <span className="text-sm font-semibold text-[var(--color-text)]">
+                {(() => {
+                  const langs = new Set(event.articles.map((a) => a.language));
+                  return langs.size > 1 ? "Turkce + Ingilizce" : event.leadArticle.language === "tr" ? "Turkce" : "Ingilizce";
+                })()}
+              </span>
+            </div>
+          </div>
+
           {/* === WHY IT MATTERS === */}
           {event.whyItMatters && (
             <div className="bg-[var(--color-accent-light)] rounded-xl p-4 transition-colors">
